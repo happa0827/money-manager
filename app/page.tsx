@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, DollarSign } from 'lucide-react';
+import { Plus, Minus, DollarSign, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-// 追加: Transaction型を再定義
+// 追加: Transaction型を定義
 type Transaction = {
   id: number;
   type: 'income' | 'expense'; // 'income'または'expense'のいずれか
   amount: number;
   description: string;
   date: string;
+  formattedDate: string; // 追加: formattedDateプロパティを定義
 };
 
 const MoneyManager = () => {
@@ -18,6 +19,9 @@ const MoneyManager = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [transactionDate, setTransactionDate] = useState(
+    new Date().toISOString().split('T')[0] // YYYY-MM-DD形式
+  );
 
   // ページ読み込み時にローカルストレージからデータを取得
   useEffect(() => {
@@ -47,7 +51,8 @@ const MoneyManager = () => {
       type,
       amount: newAmount,
       description: description || (type === 'income' ? '入金' : '出金'),
-      date: new Date().toLocaleDateString('ja-JP')
+      date: transactionDate,
+      formattedDate: formatDate(transactionDate)
     };
 
     setTransactions([newTransaction, ...transactions]);
@@ -56,6 +61,17 @@ const MoneyManager = () => {
     );
     setAmount('');
     setDescription('');
+    // 日付はリセットせず、現在の日付のままにしておく
+  };
+
+  // 日付をフォーマットする関数（YYYY-MM-DD → 日本語表記）
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   // データをリセットする関数
@@ -118,6 +134,18 @@ const MoneyManager = () => {
                 className="flex-1 p-2 border rounded"
               />
             </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 flex-1 p-2 border rounded">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <input
+                  type="date"
+                  value={transactionDate}
+                  onChange={(e) => setTransactionDate(e.target.value)}
+                  className="flex-1 outline-none"
+                />
+              </div>
+            </div>
 
             <div className="flex gap-4">
               <button
@@ -165,7 +193,7 @@ const MoneyManager = () => {
                 >
                   <div>
                     <div className="font-medium">{transaction.description}</div>
-                    <div className="text-sm text-gray-600">{transaction.date}</div>
+                    <div className="text-sm text-gray-600">{transaction.formattedDate || formatDate(transaction.date)}</div>
                   </div>
                   <div className={`font-bold ${
                     transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
