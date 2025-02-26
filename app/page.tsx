@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, DollarSign, Calendar } from 'lucide-react';
+import { Plus, Minus, DollarSign, Calendar, Moon, Sun } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // 追加: Transaction型を定義
@@ -22,18 +22,24 @@ const MoneyManager = () => {
   const [transactionDate, setTransactionDate] = useState(
     new Date().toISOString().split('T')[0] // YYYY-MM-DD形式
   );
+  // 追加: ダークモード状態の管理
+  const [darkMode, setDarkMode] = useState(false);
 
-  // ページ読み込み時にローカルストレージからデータを取得
+  // ページ読み込み時にローカルストレージからデータとテーマ設定を取得
   useEffect(() => {
     try {
       const savedBalance = localStorage.getItem('balance');
       const savedTransactions = localStorage.getItem('transactions');
+      const savedTheme = localStorage.getItem('darkMode');
       
       if (savedBalance) {
         setBalance(parseFloat(savedBalance));
       }
       if (savedTransactions) {
         setTransactions(JSON.parse(savedTransactions));
+      }
+      if (savedTheme) {
+        setDarkMode(savedTheme === 'true');
       }
     } catch (error) {
       console.error('データの読み込み中にエラーが発生しました:', error);
@@ -52,6 +58,21 @@ const MoneyManager = () => {
       console.error('データの保存中にエラーが発生しました:', error);
     }
   }, [balance, transactions]);
+
+  // ダークモード設定が変更されたら保存
+  useEffect(() => {
+    try {
+      localStorage.setItem('darkMode', darkMode.toString());
+      // HTML要素にクラスを追加/削除
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (error) {
+      console.error('テーマ設定の保存中にエラーが発生しました:', error);
+    }
+  }, [darkMode]);
 
   const handleTransaction = (type: 'income' | 'expense') => {
     const newAmount = parseFloat(amount);
@@ -134,10 +155,26 @@ const MoneyManager = () => {
     }
   };
 
+  // テーマを切り替える関数
+  const toggleTheme = () => {
+    setDarkMode(prev => !prev);
+  };
+
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-4">
-      <Card>
-        <CardHeader>
+    <div className={`max-w-2xl mx-auto p-4 space-y-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+      <Card className={darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}>
+        <CardHeader className="relative">
+          <button 
+            onClick={toggleTheme}
+            className="absolute right-4 top-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label="テーマ切り替え"
+          >
+            {darkMode ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </button>
           <CardTitle className="text-2xl text-center">家計簿アプリ</CardTitle>
         </CardHeader>
         <CardContent>
@@ -155,25 +192,33 @@ const MoneyManager = () => {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="金額"
-                className="flex-1 p-2 border rounded"
+                className={`flex-1 p-2 border rounded ${
+                  darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                }`}
               />
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="説明"
-                className="flex-1 p-2 border rounded"
+                className={`flex-1 p-2 border rounded ${
+                  darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                }`}
               />
             </div>
             
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 flex-1 p-2 border rounded">
+              <div className={`flex items-center gap-2 flex-1 p-2 border rounded ${
+                darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+              }`}>
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <input
                   type="date"
                   value={transactionDate}
                   onChange={(e) => setTransactionDate(e.target.value)}
-                  className="flex-1 outline-none"
+                  className={`flex-1 outline-none ${
+                    darkMode ? 'bg-gray-700 text-white' : 'bg-white'
+                  }`}
                 />
               </div>
             </div>
@@ -220,15 +265,21 @@ const MoneyManager = () => {
                   <div
                     key={transaction.id}
                     className={`p-3 rounded flex justify-between items-center ${
-                      transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
+                      transaction.type === 'income' 
+                        ? darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100' 
+                        : darkMode ? 'bg-red-900 text-red-100' : 'bg-red-100'
                     }`}
                   >
                     <div>
                       <div className="font-medium">{transaction.description}</div>
-                      <div className="text-sm text-gray-600">{transaction.formattedDate || formatDate(transaction.date)}</div>
+                      <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {transaction.formattedDate || formatDate(transaction.date)}
+                      </div>
                     </div>
                     <div className={`font-bold ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                      transaction.type === 'income' 
+                        ? darkMode ? 'text-green-300' : 'text-green-600' 
+                        : darkMode ? 'text-red-300' : 'text-red-600'
                     }`}>
                       {transaction.type === 'income' ? '+' : '-'}
                       {transaction.amount.toLocaleString()}円
@@ -236,7 +287,7 @@ const MoneyManager = () => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 text-gray-500">
+                <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   取引データがありません
                 </div>
               )}
