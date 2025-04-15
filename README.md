@@ -3,7 +3,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ## Getting Started
 
 First, run the development server:
-
+https://roaring-palmier-ae3581.netlify.app/
 ```bash
 npm run dev
 # or
