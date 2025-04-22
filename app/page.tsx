@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Minus, DollarSign, Calendar, Moon, Sun } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { ja } from 'date-fns/locale';
 
 // 追加: Transaction型を定義
 type Transaction = {
@@ -19,9 +22,7 @@ const MoneyManager = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]); // Transaction型を指定
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [transactionDate, setTransactionDate] = useState(
-    new Date().toISOString().split('T')[0] // YYYY-MM-DD形式
-  );
+  const [transactionDate, setTransactionDate] = useState<Date>(new Date());
   // 追加: ダークモード状態の管理
   const [darkMode, setDarkMode] = useState(false);
 
@@ -83,8 +84,8 @@ const MoneyManager = () => {
       type,
       amount: newAmount,
       description: description || (type === 'income' ? '入金' : '出金'),
-      date: transactionDate,
-      formattedDate: formatDate(transactionDate)
+      date: transactionDate.toISOString().split('T')[0], // 保存はISO形式
+      formattedDate: formatDate(transactionDate.toISOString())
     };
 
     setTransactions(prev => [newTransaction, ...prev]);
@@ -114,26 +115,24 @@ const formatDate = (dateString: string) => {
 };
 
 
-  // データをリセットする関数
-  const handleReset = () => {
-    if (window.confirm('全てのデータをリセットしてもよろしいですか？')) {
-      // ステートを初期化
-      setBalance(0);
-      setTransactions([]);
-      
-      // ローカルストレージをクリア
-      try {
-        localStorage.removeItem('balance');
-        localStorage.removeItem('transactions');
-      } catch (error) {
-        console.error('データのリセット中にエラーが発生しました:', error);
-      }
-      
-      // 入力フィールドの状態は維持
-      // 日付は現在の日付に戻す
-      setTransactionDate(new Date().toISOString().split('T')[0]);
+const handleReset = () => {
+  if (window.confirm('全てのデータをリセットしてもよろしいですか？')) {
+    setBalance(0);
+    setTransactions([]);
+
+    try {
+      localStorage.removeItem('balance');
+      localStorage.removeItem('transactions');
+    } catch (error) {
+      console.error('データのリセット中にエラーが発生しました:', error);
     }
-  };
+
+    // 入力フィールドの状態は維持
+    // 日付は Date 型で初期化
+    setTransactionDate(new Date());
+  }
+};
+
 
   // データをエクスポートする関数
   const handleExport = () => {
@@ -212,19 +211,24 @@ const formatDate = (dateString: string) => {
             </div>
             
             <div className="flex items-center gap-4">
-              <div className={`flex items-center gap-2 flex-1 p-2 border rounded ${
-                darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-              }`}>
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <input
-                  type="date"
-                  value={transactionDate}
-                  onChange={(e) => setTransactionDate(e.target.value)}
-                  className={`flex-1 outline-none ${
-                    darkMode ? 'bg-gray-700 text-white' : 'bg-white'
-                  }`}
-                />
-              </div>
+            <div className={`flex items-center gap-2 flex-1 p-2 border rounded ${
+  darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+}`}>
+  <Calendar className="w-4 h-4 text-gray-500" />
+  <DatePicker
+  selected={transactionDate}
+  onChange={(date: Date | null) => {
+    if (date) setTransactionDate(date);
+  }}
+  dateFormat="yyyy/MM/dd (eee)" // 曜日付き
+  locale={ja}
+  className={`w-full p-2 rounded-md border outline-none transition-colors
+    ${darkMode
+      ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400'
+      : 'bg-white text-black border-gray-300'}
+  `}
+/>
+</div>
             </div>
 
             <div className="flex gap-4">

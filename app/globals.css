@@ -78,3 +78,46 @@
     @apply bg-background text-foreground;
   }
 }
+/* global.css などに追加 */
+.react-datepicker {
+  @apply bg-white text-black;
+}
+
+.dark .react-datepicker {
+  @apply bg-gray-800 text-white border-gray-700;
+}
+
+.dark .react-datepicker__day,
+.dark .react-datepicker__day-name,
+.dark .react-datepicker__current-month {
+  @apply text-white;
+}
+
+.dark .react-datepicker__day--selected {
+  @apply bg-blue-600 text-white;
+}
+/* react-datepicker ダークモード対応 */
+.react-datepicker {
+  @apply rounded-lg shadow-md border;
+  @apply bg-white text-black border-gray-300;
+}
+
+.dark .react-datepicker {
+  @apply bg-gray-800 text-white border-gray-700;
+}
+
+.dark .react-datepicker__day,
+.dark .react-datepicker__day-name,
+.dark .react-datepicker__current-month,
+.dark .react-datepicker__navigation-icon::before {
+  @apply text-white;
+}
+
+.dark .react-datepicker__day--selected,
+.dark .react-datepicker__day--keyboard-selected {
+  @apply bg-blue-600 text-white;
+}
+
+.dark .react-datepicker__header {
+  @apply bg-gray-900 border-b border-gray-700;
+}
