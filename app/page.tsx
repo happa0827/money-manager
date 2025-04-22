@@ -100,13 +100,13 @@ const MoneyManager = () => {
 const formatDate = (dateString: string) => {
   try {
     const date = new Date(dateString);
-    const weekday = date.toLocaleDateString('ja-JP', { weekday: 'short' }); // 曜日 (例: 月)
     const formatted = date.toLocaleDateString('ja-JP', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      weekday: 'short' // ← ここで曜日を追加
     });
-    return `${formatted} (${weekday})`; // 例: 2025年4月22日 (火)
+    return formatted; // 例: 2025年4月22日(火)
   } catch (error) {
     console.error('日付のフォーマット中にエラーが発生しました:', error);
     return dateString;
