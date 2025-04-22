@@ -96,19 +96,23 @@ const MoneyManager = () => {
   };
 
   // 日付をフォーマットする関数（YYYY-MM-DD → 日本語表記）
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error('日付のフォーマット中にエラーが発生しました:', error);
-      return dateString;
-    }
-  };
+// 日付をフォーマットする関数（YYYY-MM-DD → 日本語表記 + 曜日）
+const formatDate = (dateString: string) => {
+  try {
+    const date = new Date(dateString);
+    const weekday = date.toLocaleDateString('ja-JP', { weekday: 'short' }); // 曜日 (例: 月)
+    const formatted = date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    return `${formatted} (${weekday})`; // 例: 2025年4月22日 (火)
+  } catch (error) {
+    console.error('日付のフォーマット中にエラーが発生しました:', error);
+    return dateString;
+  }
+};
+
 
   // データをリセットする関数
   const handleReset = () => {
