@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { Transaction } from '@/app/MoneyManager';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
   PieChart, Pie, Cell,
@@ -12,22 +13,22 @@ const COLORS = ['#4ade80', '#f87171']; // 緑：収入, 赤：支出
 const MonthlySummary = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   useEffect(() => {
     const data = searchParams.get('data');
     if (data) {
       try {
-        const decoded = JSON.parse(decodeURIComponent(data)) as any[];
+        const decoded: Transaction[] = JSON.parse(decodeURIComponent(data));
         setTransactions(decoded);
-  
+
         const months = decoded
-          .map((t: any) => typeof t.date === 'string' ? t.date.slice(0, 7) : null)
+          .map((t) => typeof t.date === 'string' ? t.date.slice(0, 7) : null)
           .filter((m): m is string => m !== null);
-  
+
         const uniqueMonths = Array.from(new Set(months));
-  
+
         if (uniqueMonths.length > 0) {
           setSelectedMonth(uniqueMonths[0]);
         }
@@ -36,9 +37,8 @@ const MonthlySummary = () => {
       }
     }
   }, [searchParams]);
-  
 
-  const getMonthlySummary = (transactions: any[]) => {
+  const getMonthlySummary = (transactions: Transaction[]) => {
     const summaryMap = new Map<string, { income: number; expense: number }>();
     transactions.forEach(({ date, type, amount }) => {
       const monthKey = date.slice(0, 7);
@@ -61,7 +61,7 @@ const MonthlySummary = () => {
     }));
   };
 
-  const getPieDataForMonth = (transactions: any[], selectedMonth: string) => {
+  const getPieDataForMonth = (transactions: Transaction[], selectedMonth: string) => {
     const monthlyTransactions = transactions.filter((t) => t.date.startsWith(selectedMonth));
     const income = monthlyTransactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const expense = monthlyTransactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
@@ -141,4 +141,11 @@ const MonthlySummary = () => {
   );
 };
 
-export default MonthlySummary;
+// サスペンスでラップ
+const MonthlySummaryWithSuspense = () => (
+  <Suspense fallback={<div>Loading...</div>}>
+    <MonthlySummary />
+  </Suspense>
+);
+
+export default MonthlySummaryWithSuspense;

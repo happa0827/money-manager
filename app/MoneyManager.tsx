@@ -13,7 +13,7 @@ import LoginForm from '@/components/LoginForm';
 import LogoutButton from '@/components/LogoutButton';
 import { useRouter } from 'next/navigation';
 
-type Transaction = {
+export type Transaction = {
   id: number;
   type: 'income' | 'expense';
   amount: number;
@@ -21,35 +21,7 @@ type Transaction = {
   date: string;
   formattedDate?: string; // ←これを追加！
 };
-
-type MonthlySummary = {
-    month: string;
-    income: number;
-    expense: number;
-  };
   
-  const getMonthlySummary = (transactions: Transaction[]): MonthlySummary[] => {
-    const summaryMap = new Map<string, { income: number; expense: number }>();
-  
-    transactions.forEach(({ date, type, amount }) => {
-      const monthKey = date.slice(0, 7); // YYYY-MM
-      if (!summaryMap.has(monthKey)) {
-        summaryMap.set(monthKey, { income: 0, expense: 0 });
-      }
-      const monthData = summaryMap.get(monthKey)!;
-      if (type === 'income') {
-        monthData.income += amount;
-      } else {
-        monthData.expense += amount;
-      }
-    });
-  
-    return Array.from(summaryMap.entries()).map(([month, { income, expense }]) => ({
-      month,
-      income,
-      expense,
-    }));
-  };
   
 
 const MoneyManager = () => {
@@ -60,11 +32,8 @@ const MoneyManager = () => {
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
   const { darkMode, toggleTheme } = useTheme(); // ←状態を取得
   const { user } = useAuth();
-  const monthlyData = getMonthlySummary(transactions);
-  const [showGraph, setShowGraph] = useState(false);
   const router = useRouter();
-
-  const ViewSummaryButton = ({ transactions }: { transactions: any[] }) => {
+  const ViewSummaryButton = ({ transactions }: { transactions: Transaction[] }) => {
     const handleClick = () => {
       const encoded = encodeURIComponent(JSON.stringify(transactions));
       router.push(`/monthly-summary?data=${encoded}`);
