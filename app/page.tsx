@@ -6,155 +6,136 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ja } from 'date-fns/locale';
+import { supabase } from '@/lib/supabase';  // Supabaseのインスタンスをインポート
 
-// 追加: Transaction型を定義
 type Transaction = {
   id: number;
-  type: 'income' | 'expense'; // 'income'または'expense'のいずれか
+  type: 'income' | 'expense';
   amount: number;
   description: string;
   date: string;
-  formattedDate: string; // 追加: formattedDateプロパティを定義
+  formattedDate?: string; // ←これを追加！
 };
+
 
 const MoneyManager = () => {
   const [balance, setBalance] = useState(0);
-  const [transactions, setTransactions] = useState<Transaction[]>([]); // Transaction型を指定
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
-  // 追加: ダークモード状態の管理
   const [darkMode, setDarkMode] = useState(false);
 
-  // ページ読み込み時にローカルストレージからデータとテーマ設定を取得
+  
+  // ページ読み込み時にデータベースから取引データを取得
   useEffect(() => {
-    try {
-      const savedBalance = localStorage.getItem('balance');
-      const savedTransactions = localStorage.getItem('transactions');
-      const savedTheme = localStorage.getItem('darkMode');
-      
-      if (savedBalance) {
-        setBalance(parseFloat(savedBalance));
+    const fetchTransactions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .order('date', { ascending: false });
+  
+        if (error) throw error;
+  
+        const transactionsWithFormatted = data.map((t: any) => ({
+          ...t,
+          formattedDate: t.formatteddate,
+        }));
+  
+        setTransactions(transactionsWithFormatted);
+  
+        const totalBalance = transactionsWithFormatted.reduce((sum: number, transaction: Transaction) => {
+          return transaction.type === 'income'
+            ? sum + transaction.amount
+            : sum - transaction.amount;
+        }, 0);
+        setBalance(totalBalance);
+      } catch (error) {
+        console.error('取引データの取得中にエラーが発生しました:', error);
       }
-      if (savedTransactions) {
-        setTransactions(JSON.parse(savedTransactions));
-      }
-      if (savedTheme) {
-        setDarkMode(savedTheme === 'true');
-      }
-    } catch (error) {
-      console.error('データの読み込み中にエラーが発生しました:', error);
-      // エラーが発生した場合は初期状態にリセット
-      setBalance(0);
-      setTransactions([]);
-    }
+    };
+  
+    fetchTransactions();
+    
+    
+    
   }, []);
 
-  // データが更新されたらローカルストレージに保存
-  useEffect(() => {
+  // 日付をフォーマットする関数（YYYY-MM-DD → 日本語表記 + 曜日）
+  const formatDate = (dateString: string) => {
     try {
-      localStorage.setItem('balance', balance.toString());
-      localStorage.setItem('transactions', JSON.stringify(transactions));
+      const date = new Date(dateString);
+      const formatted = date.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short'
+      });
+      return formatted; // 例: 2025年4月22日(火)
     } catch (error) {
-      console.error('データの保存中にエラーが発生しました:', error);
+      console.error('日付のフォーマット中にエラーが発生しました:', error);
+      return dateString;
     }
-  }, [balance, transactions]);
-
-  // ダークモード設定が変更されたら保存
-  useEffect(() => {
-    try {
-      localStorage.setItem('darkMode', darkMode.toString());
-      // HTML要素にクラスを追加/削除
-      if (darkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    } catch (error) {
-      console.error('テーマ設定の保存中にエラーが発生しました:', error);
-    }
-  }, [darkMode]);
-
-  const handleTransaction = (type: 'income' | 'expense') => {
+  };
+  const handleTransaction = async (type: 'income' | 'expense') => {
     const newAmount = parseFloat(amount);
     if (!amount || isNaN(newAmount)) return;
-    
+  
+    const formattedDate = formatDate(transactionDate.toISOString());
+  
     const newTransaction = {
       id: Date.now(),
       type,
       amount: newAmount,
       description: description || (type === 'income' ? '入金' : '出金'),
-      date: transactionDate.toISOString().split('T')[0], // 保存はISO形式
-      formattedDate: formatDate(transactionDate.toISOString())
+      date: transactionDate.toISOString().split('T')[0], // 日付のみ (YYYY-MM-DD)
+      formatteddate: formattedDate, // formatteddate に統一
     };
-
-    setTransactions(prev => [newTransaction, ...prev]);
-    setBalance(prevBalance => 
-      type === 'income' ? prevBalance + newAmount : prevBalance - newAmount
-    );
-    setAmount('');
-    setDescription('');
-  };
-
-  // 日付をフォーマットする関数（YYYY-MM-DD → 日本語表記）
-// 日付をフォーマットする関数（YYYY-MM-DD → 日本語表記 + 曜日）
-const formatDate = (dateString: string) => {
-  try {
-    const date = new Date(dateString);
-    const formatted = date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'short' // ← ここで曜日を追加
-    });
-    return formatted; // 例: 2025年4月22日(火)
-  } catch (error) {
-    console.error('日付のフォーマット中にエラーが発生しました:', error);
-    return dateString;
-  }
-};
-
-
-const handleReset = () => {
-  if (window.confirm('全てのデータをリセットしてもよろしいですか？')) {
-    setBalance(0);
-    setTransactions([]);
-
+  
+    // Supabase用のデータ（カラム名をDBに合わせる）
+    const supabaseInsertData = {
+      ...newTransaction,
+      formatteddate: formattedDate, // DBのカラム名に合わせる
+    };
+  
     try {
-      localStorage.removeItem('balance');
-      localStorage.removeItem('transactions');
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert([supabaseInsertData]);
+  
+      if (error) throw error;
+  
+      console.log('取引が保存されました:', data);
+  
+      setTransactions(prev => [newTransaction, ...prev]);
+      setBalance(prev =>
+        type === 'income' ? prev + newAmount : prev - newAmount
+      );
+      setAmount('');
+      setDescription('');
     } catch (error) {
-      console.error('データのリセット中にエラーが発生しました:', error);
+      console.error('取引データの保存中にエラーが発生しました:', error);
     }
+  };
+  
+  
 
-    // 入力フィールドの状態は維持
-    // 日付は Date 型で初期化
-    setTransactionDate(new Date());
-  }
-};
-
-
-  // データをエクスポートする関数
-  const handleExport = () => {
-    try {
-      const data = {
-        balance: balance,
-        transactions: transactions,
-        exportDate: new Date().toISOString()
-      };
-      
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `money-manager-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('データのエクスポート中にエラーが発生しました:', error);
-      alert('エクスポート中にエラーが発生しました');
+  const handleReset = async () => {
+    if (window.confirm('全てのデータをリセットしてもよろしいですか？')) {
+      try {
+        const { error } = await supabase
+          .from('transactions')
+          .delete()
+          .neq('id', 0);  // 適当な条件で全件削除
+        
+        if (error) throw error;
+        
+        setBalance(0);
+        setTransactions([]);
+      } catch (error) {
+        console.error('データのリセット中にエラーが発生しました:', error);
+      }
     }
   };
 
@@ -162,9 +143,83 @@ const handleReset = () => {
   const toggleTheme = () => {
     setDarkMode(prev => !prev);
   };
+  console.log('formattedDate:', formatDate(transactionDate.toISOString()));
+  const handleLoadFromFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+  
+    const reader = new FileReader();
+  
+    reader.onload = async (event) => {
+      try {
+        const json = event.target?.result as string;
+        if (!json) {
+          console.error('ファイルの読み込みに失敗しました。内容が空です。');
+          return;
+        }
+  
+        const loadedTransactions: Transaction[] = JSON.parse(json);
+        console.log('読み込んだ取引データ:', loadedTransactions);
+  
+        // `formattedDate` を適切に設定
+        const formattedTransactions = loadedTransactions.map((t) => ({
+          ...t,
+          formattedDate: t.formattedDate || formatDate(t.date), // 日付がなければフォーマット
+        }));
+  
+        // Supabaseに挿入
+        const { data, error } = await supabase
+          .from('transactions')
+          .insert(formattedTransactions);
+  
+        if (error) {
+          console.error('データの挿入中にエラーが発生しました:', error);
+          alert('データの保存に失敗しました');
+          return;
+        }
+  
+        console.log('取引データがデータベースに保存されました:', data);
+  
+        // 取引データを状態に反映
+        setTransactions(formattedTransactions); // フォーマット済みデータを使用
+        const total = formattedTransactions.reduce((sum, t) => {
+          return t.type === 'income' ? sum + t.amount : sum - t.amount;
+        }, 0);
+        setBalance(total);
+  
+      } catch (err) {
+        console.error('ファイル読み込みエラー:', err);
+        alert('ファイルの形式が正しくありません。');
+      }
+    };
+  
+    reader.onerror = (err) => {
+      console.error('FileReaderエラー:', err);
+      alert('ファイルの読み込み中にエラーが発生しました。');
+    };
+  
+    reader.readAsText(file);
+  };
+  
+    
+  
+  
+  const handleSaveToFile = () => {
+    const json = JSON.stringify(transactions, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+  
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'transactions.json';
+    a.click();
+  
+    URL.revokeObjectURL(url);
+  };
+  
 
   return (
-    <div className={`max-w-2xl mx-auto p-4 space-y-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+    <div className={`${darkMode ? 'bg-gray-900' : 'bg-white'} min-h-screen`}>
       <Card className={darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}>
         <CardHeader className="relative">
           <button 
@@ -211,24 +266,24 @@ const handleReset = () => {
             </div>
             
             <div className="flex items-center gap-4">
-            <div className={`flex items-center gap-2 flex-1 p-2 border rounded ${
-  darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-}`}>
-  <Calendar className="w-4 h-4 text-gray-500" />
-  <DatePicker
-  selected={transactionDate}
-  onChange={(date: Date | null) => {
-    if (date) setTransactionDate(date);
-  }}
-  dateFormat="yyyy/MM/dd (eee)" // 曜日付き
-  locale={ja}
-  className={`w-full p-2 rounded-md border outline-none transition-colors
-    ${darkMode
-      ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400'
-      : 'bg-white text-black border-gray-300'}
-  `}
-/>
-</div>
+              <div className={`flex items-center gap-2 flex-1 p-2 border rounded ${
+                darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+              }`}>
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <DatePicker
+                  selected={transactionDate}
+                  onChange={(date: Date | null) => {
+                    if (date) setTransactionDate(date);
+                  }}
+                  dateFormat="yyyy/MM/dd (eee)" 
+                  locale={ja}
+                  className={`w-full p-2 rounded-md border outline-none transition-colors
+                    ${darkMode
+                      ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400'
+                      : 'bg-white text-black border-gray-300'}
+                  `}
+                />
+              </div>
             </div>
 
             <div className="flex gap-4">
@@ -236,73 +291,68 @@ const handleReset = () => {
                 onClick={() => handleTransaction('income')}
                 className="flex-1 bg-green-500 text-white p-2 rounded flex items-center justify-center gap-2"
               >
-                <Plus className="w-4 h-4" />
-                入金
+                <Plus className="w-5 h-5" />
+                収入
               </button>
               <button
                 onClick={() => handleTransaction('expense')}
                 className="flex-1 bg-red-500 text-white p-2 rounded flex items-center justify-center gap-2"
               >
-                <Minus className="w-4 h-4" />
-                出金
+                <Minus className="w-5 h-5" />
+                支出
               </button>
             </div>
-          </div>
 
-          <div className="mt-8">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">取引履歴</h3>
-              <div className="space-x-2">
-                <button
-                  onClick={handleExport}
-                  className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
-                >
-                  エクスポート
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="px-3 py-1 bg-gray-500 text-white rounded text-sm"
-                >
-                  リセット
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {transactions.length > 0 ? (
-                transactions.map(transaction => (
-                  <div
-                    key={transaction.id}
-                    className={`p-3 rounded flex justify-between items-center ${
-                      transaction.type === 'income' 
-                        ? darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100' 
-                        : darkMode ? 'bg-red-900 text-red-100' : 'bg-red-100'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-medium">{transaction.description}</div>
-                      <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {transaction.formattedDate || formatDate(transaction.date)}
-                      </div>
-                    </div>
-                    <div className={`font-bold ${
-                      transaction.type === 'income' 
-                        ? darkMode ? 'text-green-300' : 'text-green-600' 
-                        : darkMode ? 'text-red-300' : 'text-red-600'
-                    }`}>
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {transaction.amount.toLocaleString()}円
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  取引データがありません
-                </div>
-              )}
+            <div className="mt-4 text-center">
+              <button
+                onClick={handleReset}
+                className="text-red-600 p-2 hover:bg-red-100 rounded"
+              >
+                データをリセット
+              </button>
             </div>
           </div>
         </CardContent>
       </Card>
+      {/* 取引カードの表示 */}
+<div className="space-y-4 mt-6">
+  {transactions.length === 0 ? (
+    <p className="text-center text-gray-400">取引がまだありません</p>
+  ) : (
+    transactions.map((t) => (
+      <Card key={t.id} className={darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}>
+        <CardHeader>
+          <CardTitle>{t.description}</CardTitle>
+          <p className="text-sm text-gray-500">{t.formattedDate || formatDate(t.date)}</p>
+        </CardHeader>
+        <CardContent>
+          <p className={`text-lg font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+            {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}円
+          </p>
+        </CardContent>
+      </Card>
+    ))
+  )}
+</div>
+<div className="flex gap-4 justify-center mt-6">
+  <button
+    onClick={handleSaveToFile}
+    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+  >
+    JSONで保存
+  </button>
+
+  <label className="bg-yellow-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-yellow-600">
+    JSON読み込み
+    <input
+      type="file"
+      accept=".json"
+      onChange={handleLoadFromFile}
+      className="hidden"
+    />
+  </label>
+</div>
+
     </div>
   );
 };
