@@ -38,7 +38,7 @@ const MoneyManager = () => {
   
         if (error) throw error;
   
-        const transactionsWithFormatted = data.map((t: any) => ({
+        const transactionsWithFormatted = data.map((t) => ({
           ...t,
           formattedDate: t.formatteddate,
         }));
