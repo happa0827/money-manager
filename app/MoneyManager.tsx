@@ -30,7 +30,8 @@ const MoneyManager = () => {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
-  const { darkMode, toggleTheme } = useTheme(); // ←状態を取得
+  const { theme, toggleTheme } = useTheme();
+  const darkMode = theme === 'dark';
   const { user } = useAuth();
   const router = useRouter();
   const ViewSummaryButton = ({ transactions }: { transactions: Transaction[] }) => {
@@ -45,6 +46,7 @@ const MoneyManager = () => {
       </button>
     );
   };
+  
 
   // ページ読み込み時にデータベースから取引データを取得
   useEffect(() => {
