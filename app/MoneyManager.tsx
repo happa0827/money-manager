@@ -114,11 +114,14 @@ const MoneyManager = () => {
       formattedDate: formattedDate,
     };
   
-    // Supabase用のデータ（カラム名をDBに合わせる）
-    const supabaseInsertData = {
-      ...newTransaction,
-      formatteddate: formattedDate, // DBのカラム名に合わせる
-    };
+// Supabase用のデータ（カラム名をDBに合わせる）
+const supabaseInsertData = {
+  type: newTransaction.type,
+  amount: newTransaction.amount,
+  description: newTransaction.description,
+  date: newTransaction.date,
+  formatteddate: newTransaction.formattedDate, // 正しいカラム名
+};
   
     try {
       const { data, error } = await supabase
