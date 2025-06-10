@@ -36,12 +36,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // セッションの存在を確認
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+      }
+
+      // セッションの有無に関わらず、ユーザー状態をクリア
       setUser(null);
     } catch (error) {
       console.error('ログアウトエラー:', error);
-      throw error;
+      // エラーが発生してもユーザー状態はクリア
+      setUser(null);
     }
   };
 
