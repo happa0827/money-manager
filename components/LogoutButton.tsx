@@ -10,6 +10,7 @@ export default function LogoutButton() {
   const handleLogout = async () => {
     try {
       await logout();
+      window.location.reload();
     } catch (error) {
       console.error('ログアウト失敗:', error);
     }
