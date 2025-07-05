@@ -1,0 +1,41 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Transactionモデルとの関係を定義
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id            Int      @id @default(autoincrement())
+  type          String   // 'income' or 'expense'
+  amount        Float
+  description   String
+  date          String   // YYYY-MM-DD形式
+  formattedDate String?  // 日本語表記の日付
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("transactions")
+}
